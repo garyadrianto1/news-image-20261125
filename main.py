@@ -38,6 +38,15 @@ re-centred in its box (was 5px left of centre, crowding the left
 border) and the DATE CHECK title raised 3px to centre it in its
 header band — same 9 stories, no wording changed.
 
+v7 (25 Nov 2026, round-7 fix): world-map box completed and artwork
+re-centred against its OWN borders — the left border line was broken
+(stubs only, middle 120 rows missing), so it was restored, and the
+background rectangle was narrowed to equal 12px clearances each side
+(centre 756.0); the four DATE CHECK dashes were replaced by bold
+serif numbers 1. 2. 3. 4. (Liberation Serif Bold, same style as the
+medium/ALSO ON lists) with 7-8px gaps to the text, and each list line
+shifted right 7px — same 9 stories, no wording changed.
+
 Exit codes: 0 ok, 2 the stored image is bad, 3 the copy does not match.
 """
 
@@ -52,8 +61,8 @@ EDGE = 1024
 MAGIC = b"\x89PNG\r\n\x1a\n"
 TAIL = b"\x00\x00\x00\x00IEND\xaeB`\x82"
 
-# Stored image (v6): 212273 bytes, sha256
-# 54d8901d63bc3a4385a42d5ca917af32eda2b9ab526ea48885fd3145c91dc893.
+# Stored image (v7): 212179 bytes, sha256
+# 20089e85ec23b865bc317a1fb0953b72bdccb1542df6d472c1cdd908ae5951ee.
 # Keep this in sync with source/entry.png on every fix round.
 #
 # v1.1 (QA transcript-gate fix, 25 Nov 2026): the v1 builder wrote
