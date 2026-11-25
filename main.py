@@ -20,6 +20,10 @@ v2 (25 Nov 2026, layout redesign): entry.png redrawn with detailed
 painterly illustrations to the NI24 v5 standard — same 9 stories,
 same headlines, proper world map with 7 pins.
 
+v3 (25 Nov 2026, round-3 fix): both black ticker texts re-centred
+vertically in their bars (moved up 4px) and the DATE CHECK list
+refit inside its box — same 9 stories, no wording changed.
+
 Exit codes: 0 ok, 2 the stored image is bad, 3 the copy does not match.
 """
 
@@ -34,8 +38,8 @@ EDGE = 1024
 MAGIC = b"\x89PNG\r\n\x1a\n"
 TAIL = b"\x00\x00\x00\x00IEND\xaeB`\x82"
 
-# Stored image (v2): 206321 bytes, sha256
-# 01de5eda9bba7efc091633fdceab16da3398b3e8d7812a814d072fb9087a27fc.
+# Stored image (v3): 211850 bytes, sha256
+# 73325eba8bafee9d664dfb027e51df4638350e3dcbbee91aaf8ec5f8316f2cf5.
 # Keep this in sync with source/entry.png on every fix round.
 #
 # v1.1 (QA transcript-gate fix, 25 Nov 2026): the v1 builder wrote
