@@ -47,6 +47,13 @@ serif numbers 1. 2. 3. 4. (Liberation Serif Bold, same style as the
 medium/ALSO ON lists) with 7-8px gaps to the text, and each list line
 shifted right 7px — same 9 stories, no wording changed.
 
+v8 (25 Nov 2026, round-8 fix): the two ALSO ON items' text raised
+7px — the writing sat 10px (item 1) / 12px (item 2) low against its
+own icon, and item 2's last sub line was 3px from the separator rule
+with its descender crossing the rule; now the text centres 3px/5px
+below the icon centres, and the last descender sits 16px clear of
+the divider rule — same 9 stories, no wording changed.
+
 Exit codes: 0 ok, 2 the stored image is bad, 3 the copy does not match.
 """
 
@@ -61,8 +68,8 @@ EDGE = 1024
 MAGIC = b"\x89PNG\r\n\x1a\n"
 TAIL = b"\x00\x00\x00\x00IEND\xaeB`\x82"
 
-# Stored image (v7): 212179 bytes, sha256
-# 20089e85ec23b865bc317a1fb0953b72bdccb1542df6d472c1cdd908ae5951ee.
+# Stored image (v8): 212310 bytes, sha256
+# 961147bb86ffb4f9a7a50f2db6ad7c337dad53dcaa3a856180f1bb40f5b6dbcd.
 # Keep this in sync with source/entry.png on every fix round.
 #
 # v1.1 (QA transcript-gate fix, 25 Nov 2026): the v1 builder wrote
