@@ -29,6 +29,10 @@ vertically in its band, world-map artwork cropped 10px off its right
 edge so it sits clear of the box border, and four stray specks left
 of the DATE CHECK dashes removed — same 9 stories, no wording changed.
 
+v5 (25 Nov 2026, round-5 fix): restored the four DATE CHECK dashes —
+a visible 10px rule before each dropped-item line, centred on the
+text line's mid-height — same 9 stories, no wording changed.
+
 Exit codes: 0 ok, 2 the stored image is bad, 3 the copy does not match.
 """
 
@@ -43,8 +47,8 @@ EDGE = 1024
 MAGIC = b"\x89PNG\r\n\x1a\n"
 TAIL = b"\x00\x00\x00\x00IEND\xaeB`\x82"
 
-# Stored image (v4): 212347 bytes, sha256
-# a536b5ba77ad983eab62c8860704f3cbd4c5e9a4d36d27ed68ac3fbe259ed322.
+# Stored image (v5): 212361 bytes, sha256
+# d4fa8cb46a2de14b7b15c4180c26e6bad623174b12e2bc1ed371d598351ad21d.
 # Keep this in sync with source/entry.png on every fix round.
 #
 # v1.1 (QA transcript-gate fix, 25 Nov 2026): the v1 builder wrote
