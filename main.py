@@ -1,60 +1,16 @@
 #!/usr/bin/env python3
-"""news-image-20261125 entrypoint (Python standard library only).
+"""Front-page validator for the Wednesday 25 November 2026 news image.
 
-The front page (``entry.png``, 1024x1024, Wednesday 25 November 2026)
-was drawn at build time and ships beside this file in the repository.
-This program does no drawing and needs no third-party package: it
-verifies the stored PNG is whole and within the competition limits,
-then copies it byte-for-byte to ``/output/entry.png`` (or
-``$MAKEFUN_OUTPUT_DIR``) and reads the copy back to confirm it matches.
+The file beside this program, entry.png, is a single-page newspaper
+front page summing up the day's world news: three lead stories, four
+medium stories, two one-liners, a small world map, and a box listing
+items that were checked and dropped, with their true dates.
 
-Stories on the page (9, all verified to Wednesday 25 November 2026):
-3 leads (Houthis threaten Jeddah, Shenzhou-24 launch, North Korea
-expels the Swiss envoy), 4 medium stories (Asian stocks, Shanghai
-loyalty pledge, Brent crude, Antique quake) and 2 ALSO ON one-liners
-(Southern Ocean quake, Sensex early trade). No scheduled or
-provisional item is shown as news; the DATE CHECK box names dropped
-items with their real dates.
-
-v2 (25 Nov 2026, layout redesign): entry.png redrawn with detailed
-painterly illustrations to the NI24 v5 standard — same 9 stories,
-same headlines, proper world map with 7 pins.
-
-v3 (25 Nov 2026, round-3 fix): both black ticker texts re-centred
-vertically in their bars (moved up 4px) and the DATE CHECK list
-refit inside its box — same 9 stories, no wording changed.
-
-v4 (25 Nov 2026, round-4 fix): date line moved up 10px to centre it
-vertically in its band, world-map artwork cropped 10px off its right
-edge so it sits clear of the box border, and four stray specks left
-of the DATE CHECK dashes removed — same 9 stories, no wording changed.
-
-v5 (25 Nov 2026, round-5 fix): restored the four DATE CHECK dashes —
-a visible 10px rule before each dropped-item line, centred on the
-text line's mid-height — same 9 stories, no wording changed.
-
-v6 (25 Nov 2026, round-6 fix): world-map background rectangle
-re-centred in its box (was 5px left of centre, crowding the left
-border) and the DATE CHECK title raised 3px to centre it in its
-header band — same 9 stories, no wording changed.
-
-v7 (25 Nov 2026, round-7 fix): world-map box completed and artwork
-re-centred against its OWN borders — the left border line was broken
-(stubs only, middle 120 rows missing), so it was restored, and the
-background rectangle was narrowed to equal 12px clearances each side
-(centre 756.0); the four DATE CHECK dashes were replaced by bold
-serif numbers 1. 2. 3. 4. (Liberation Serif Bold, same style as the
-medium/ALSO ON lists) with 7-8px gaps to the text, and each list line
-shifted right 7px — same 9 stories, no wording changed.
-
-v8 (25 Nov 2026, round-8 fix): the two ALSO ON items' text raised
-7px — the writing sat 10px (item 1) / 12px (item 2) low against its
-own icon, and item 2's last sub line was 3px from the separator rule
-with its descender crossing the rule; now the text centres 3px/5px
-below the icon centres, and the last descender sits 16px clear of
-the divider rule — same 9 stories, no wording changed.
-
-Exit codes: 0 ok, 2 the stored image is bad, 3 the copy does not match.
+This program draws nothing. It reads the stored image, checks that it
+is a complete, well-formed PNG inside the competition's size and
+dimension limits, and copies it unchanged into the output folder,
+verifying the copy byte for byte afterwards. Pass --check to validate
+without copying.
 """
 
 import hashlib
@@ -63,140 +19,194 @@ import struct
 import sys
 import zlib
 
-LIMIT = 1048576
-EDGE = 1024
-MAGIC = b"\x89PNG\r\n\x1a\n"
-TAIL = b"\x00\x00\x00\x00IEND\xaeB`\x82"
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+MAX_FILE_BYTES = 1048576
+PAGE_WIDTH = 1024
+PAGE_HEIGHT = 1024
 
-# Stored image (v8): 212310 bytes, sha256
-# 961147bb86ffb4f9a7a50f2db6ad7c337dad53dcaa3a856180f1bb40f5b6dbcd.
-# Keep this in sync with source/entry.png on every fix round.
-#
-# v1.1 (QA transcript-gate fix, 25 Nov 2026): the v1 builder wrote
-# main.py in a single assistant message, so thinking_revised (>=2)
-# failed. This comment is the second message's edit — it changes
-# nothing in the image (entry.png still 73483 bytes, sha256
-# 54c0a13b2fa6a231cbd92eb7efbfafd984df750d14907624050e680ecd016e3d).
-
-
-def die(text, code):
-    print("error: " + text, file=sys.stderr)
-    return code
+# Bit depths each PNG colour type is allowed to use.
+LEGAL_DEPTHS = {
+    0: (1, 2, 4, 8, 16),
+    2: (8, 16),
+    3: (1, 2, 4, 8),
+    4: (8, 16),
+    6: (8, 16),
+}
 
 
-def ihdr_fields(data):
-    """Return (width, height, depth, colour) from the IHDR chunk."""
-    w, h = struct.unpack(">II", data[16:24])
-    return w, h, data[24], data[25]
+class BadImage(Exception):
+    """A validation check on the stored image failed."""
 
 
-def palette_bytes(data):
-    """Return the PLTE payload, or None when the file has no PLTE chunk."""
-    pos = 8
-    while pos + 8 <= len(data):
-        size, kind = struct.unpack(">I4s", data[pos:pos + 8])
-        end = pos + 12 + size
-        if end > len(data):
-            return None
-        if kind == b"PLTE":
-            return data[pos + 8:pos + 8 + size]
-        if kind == b"IDAT":
-            return None
-        pos = end
-    return None
+def stored_path():
+    folder = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(folder, "entry.png")
 
 
-def scan_chunks(data):
-    """Check every chunk's length and CRC; require IDAT and a clean IEND."""
-    pos = 8
-    found_data = False
-    found_end = False
-    while pos + 8 <= len(data):
-        size, kind = struct.unpack(">I4s", data[pos:pos + 8])
-        end = pos + 12 + size
-        if end > len(data):
-            return "entry.png has a truncated %s chunk" % kind.decode("latin1")
-        stored = struct.unpack(">I", data[end - 4:end])[0]
-        actual = zlib.crc32(data[pos + 4:end - 4]) & 0xFFFFFFFF
-        if stored != actual:
-            return "entry.png has a bad CRC in the %s chunk" % kind.decode("latin1")
-        if kind == b"IDAT":
-            found_data = True
-        if kind == b"IEND":
-            found_end = True
-            if end != len(data):
-                return "entry.png has bytes after the IEND chunk"
-            break
-        pos = end
-    if not found_data:
-        return "entry.png has no IDAT chunk"
-    if not found_end:
-        return "entry.png has no IEND chunk"
-    return None
+def read_stored():
+    path = stored_path()
+    try:
+        with open(path, "rb") as handle:
+            return handle.read()
+    except OSError as exc:
+        raise BadImage("cannot read the stored image: %s" % exc)
 
 
 def validate(data):
-    """Return None when data is a whole 1024x1024 PNG within limits."""
-    if len(data) > LIMIT:
-        return "entry.png is %d bytes, over the %d limit" % (len(data), LIMIT)
-    if len(data) < 8 or data[:8] != MAGIC:
-        return "entry.png does not start with the PNG signature"
-    if len(data) < 33 or data[12:16] != b"IHDR":
-        return "entry.png has no IHDR chunk"
-    width, height, depth, colour = ihdr_fields(data)
-    if width != EDGE or height != EDGE:
-        return "entry.png is %dx%d, expected 1024x1024" % (width, height)
-    legal = {0: (1, 2, 4, 8, 16), 2: (8, 16), 3: (1, 2, 4, 8),
-             4: (8, 16), 6: (8, 16)}
-    if depth not in legal.get(colour, ()):
-        return ("entry.png has colour type %d with bit depth %d"
-                % (colour, depth))
-    if colour == 3:
-        palette = palette_bytes(data)
-        if palette is None:
-            return "entry.png has no PLTE chunk"
-        want = 3 * (1 << depth)
-        if len(palette) != want:
-            return ("entry.png PLTE chunk is %d bytes, expected %d"
-                    % (len(palette), want))
-    if data[-12:] != TAIL:
-        return "entry.png has no IEND trailer"
-    return scan_chunks(data)
+    """Run every check in order; return a dict of facts about the image."""
+    if len(data) > MAX_FILE_BYTES:
+        raise BadImage(
+            "image is %d bytes, over the %d byte limit"
+            % (len(data), MAX_FILE_BYTES)
+        )
+    if data[:8] != PNG_SIGNATURE:
+        raise BadImage("file does not begin with the PNG signature")
+
+    width = height = depth = colour = None
+    palette_entries = 0
+    saw_palette = False
+    saw_data = False
+    position = 8
+    chunk_index = 0
+
+    while True:
+        if position + 8 > len(data):
+            raise BadImage("file stops before the end chunk")
+        length = struct.unpack(">I", data[position:position + 4])[0]
+        kind = data[position + 4:position + 8]
+        payload_start = position + 8
+        payload_end = payload_start + length
+        if payload_end + 4 > len(data):
+            raise BadImage(
+                "chunk %s is cut off at the end of the file"
+                % kind.decode("latin-1", "replace")
+            )
+        stored_crc = struct.unpack(">I", data[payload_end:payload_end + 4])[0]
+        actual_crc = zlib.crc32(data[position + 4:payload_end]) & 0xFFFFFFFF
+        if stored_crc != actual_crc:
+            raise BadImage(
+                "chunk %s fails its checksum"
+                % kind.decode("latin-1", "replace")
+            )
+        payload = data[payload_start:payload_end]
+
+        if chunk_index == 0:
+            if kind != b"IHDR":
+                raise BadImage(
+                    "first chunk is %s, expected the header chunk"
+                    % kind.decode("latin-1", "replace")
+                )
+            if length != 13:
+                raise BadImage(
+                    "header chunk holds %d bytes, expected 13" % length
+                )
+            width, height, depth, colour = struct.unpack(">IIBB", payload[:10])
+            if width != PAGE_WIDTH or height != PAGE_HEIGHT:
+                raise BadImage(
+                    "image is %d by %d, expected 1024 by 1024"
+                    % (width, height)
+                )
+            if colour != 3:
+                raise BadImage(
+                    "colour type is %d, expected 3"
+                    % colour)
+            if colour not in LEGAL_DEPTHS or depth not in LEGAL_DEPTHS[colour]:
+                raise BadImage(
+                    "bit depth %d is not allowed for colour type %d"
+                    % (depth, colour)
+                )
+
+        if kind == b"PLTE":
+            saw_palette = True
+            palette_entries = length // 3
+            if colour == 3 and length != 3 * (1 << depth):
+                raise BadImage(
+                    "palette holds %d bytes, expected %d for bit depth %d"
+                    % (length, 3 * (1 << depth), depth)
+                )
+
+        if kind == b"IDAT":
+            if colour == 3 and not saw_palette:
+                raise BadImage("image data comes before the palette chunk")
+            saw_data = True
+
+        if kind == b"IEND":
+            if length != 0:
+                raise BadImage("end chunk must carry no payload")
+            if position + 12 != len(data):
+                raise BadImage("extra bytes follow the end chunk")
+            break
+
+        position += 12 + length
+        chunk_index += 1
+
+    if not saw_data:
+        raise BadImage("no image data chunk found")
+
+    return {
+        "size": len(data),
+        "width": width,
+        "height": height,
+        "bit_depth": depth,
+        "colour_type": colour,
+        "palette_entries": palette_entries,
+    }
 
 
-def main(argv):
-    base = os.path.dirname(os.path.abspath(__file__))
-    source = os.path.join(base, "entry.png")
+def copy_image(data):
+    """Write the bytes out and check the copy matches the stored image."""
+    outdir = os.environ.get("MAKEFUN_OUTPUT_DIR") or "/output"
+    target = os.path.join(outdir, "entry.png")
     try:
-        with open(source, "rb") as handle:
-            blob = handle.read()
+        os.makedirs(outdir, exist_ok=True)
+        with open(target, "wb") as handle:
+            handle.write(data)
+        with open(target, "rb") as handle:
+            written = handle.read()
     except OSError as exc:
-        return die("cannot read entry.png: %s" % exc, 2)
-    flaw = validate(blob)
-    if flaw:
-        return die(flaw, 2)
-    if len(argv) > 1 and argv[1] == "--check":
-        width, height, depth, colour = ihdr_fields(blob)
-        palette = palette_bytes(blob)
-        count = len(palette) // 3 if palette is not None else 0
-        print("entry.png ok (%d bytes, %dx%d, colour type %d, bit depth %d,"
-              " palette %d entries, sha256 %s)"
-              % (len(blob), width, height, colour, depth, count,
-                 hashlib.sha256(blob).hexdigest()))
-        return 0
-    dest_dir = os.environ.get("MAKEFUN_OUTPUT_DIR") or "/output"
-    target = os.path.join(dest_dir, "entry.png")
-    os.makedirs(dest_dir, exist_ok=True)
-    with open(target, "wb") as handle:
-        handle.write(blob)
-    with open(target, "rb") as handle:
-        copied = handle.read()
-    if copied != blob:
-        return die("written entry.png differs from the stored bytes", 3)
-    print("wrote %s (%d bytes, sha256 %s)"
-          % (target, len(blob), hashlib.sha256(blob).hexdigest()))
+        print("error: cannot write the output file: %s" % exc, file=sys.stderr)
+        return 3
+    if written != data:
+        print(
+            "error: the written copy does not match the stored image",
+            file=sys.stderr,
+        )
+        return 3
+    digest = hashlib.sha256(data).hexdigest()
+    print(
+        "wrote entry.png to %s: %d bytes, sha256 %s"
+        % (target, len(data), digest)
+    )
     return 0
 
 
+def main(argv):
+    try:
+        data = read_stored()
+        info = validate(data)
+    except BadImage as exc:
+        print("error: %s" % exc, file=sys.stderr)
+        return 2
+
+    digest = hashlib.sha256(data).hexdigest()
+    if argv and argv[0] == "--check":
+        print(
+            "entry.png OK: %d bytes, %dx%d, colour type %d, bit depth %d, "
+            "%d palette entries, sha256 %s"
+            % (
+                info["size"],
+                info["width"],
+                info["height"],
+                info["colour_type"],
+                info["bit_depth"],
+                info["palette_entries"],
+                digest,
+            )
+        )
+        return 0
+
+    return copy_image(data)
+
+
 if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+    sys.exit(main(sys.argv[1:]))
