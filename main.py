@@ -24,6 +24,11 @@ v3 (25 Nov 2026, round-3 fix): both black ticker texts re-centred
 vertically in their bars (moved up 4px) and the DATE CHECK list
 refit inside its box — same 9 stories, no wording changed.
 
+v4 (25 Nov 2026, round-4 fix): date line moved up 10px to centre it
+vertically in its band, world-map artwork cropped 10px off its right
+edge so it sits clear of the box border, and four stray specks left
+of the DATE CHECK dashes removed — same 9 stories, no wording changed.
+
 Exit codes: 0 ok, 2 the stored image is bad, 3 the copy does not match.
 """
 
@@ -38,8 +43,8 @@ EDGE = 1024
 MAGIC = b"\x89PNG\r\n\x1a\n"
 TAIL = b"\x00\x00\x00\x00IEND\xaeB`\x82"
 
-# Stored image (v3): 211850 bytes, sha256
-# 73325eba8bafee9d664dfb027e51df4638350e3dcbbee91aaf8ec5f8316f2cf5.
+# Stored image (v4): 212347 bytes, sha256
+# a536b5ba77ad983eab62c8860704f3cbd4c5e9a4d36d27ed68ac3fbe259ed322.
 # Keep this in sync with source/entry.png on every fix round.
 #
 # v1.1 (QA transcript-gate fix, 25 Nov 2026): the v1 builder wrote
