@@ -16,6 +16,10 @@ loyalty pledge, Brent crude, Antique quake) and 2 ALSO ON one-liners
 provisional item is shown as news; the DATE CHECK box names dropped
 items with their real dates.
 
+v2 (25 Nov 2026, layout redesign): entry.png redrawn with detailed
+painterly illustrations to the NI24 v5 standard — same 9 stories,
+same headlines, proper world map with 7 pins.
+
 Exit codes: 0 ok, 2 the stored image is bad, 3 the copy does not match.
 """
 
@@ -30,8 +34,8 @@ EDGE = 1024
 MAGIC = b"\x89PNG\r\n\x1a\n"
 TAIL = b"\x00\x00\x00\x00IEND\xaeB`\x82"
 
-# Stored image (v1): 73483 bytes, sha256
-# 54c0a13b2fa6a231cbd92eb7efbfafd984df750d14907624050e680ecd016e3d.
+# Stored image (v2): 206321 bytes, sha256
+# 01de5eda9bba7efc091633fdceab16da3398b3e8d7812a814d072fb9087a27fc.
 # Keep this in sync with source/entry.png on every fix round.
 #
 # v1.1 (QA transcript-gate fix, 25 Nov 2026): the v1 builder wrote
